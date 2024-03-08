@@ -1,4 +1,4 @@
-package com.lms.lmsclient.model.dto;
+package com.lms.lmsclient.model;
 
 
 import lombok.AllArgsConstructor;

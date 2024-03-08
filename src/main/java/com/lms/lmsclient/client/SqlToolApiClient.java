@@ -4,11 +4,14 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.lms.lmsclient.model.dto.LmsRequest;
-import com.lms.lmsclient.model.dto.LmsResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lms.lmsclient.model.LmsRequest;
+import com.lms.lmsclient.model.LmsResponse;
+import com.lms.lmsclient.model.LmsResponseBody;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,25 +29,28 @@ import static com.lms.lmsclient.utils.SignUtils.genSign;
 @AllArgsConstructor
 @Slf4j
 @NoArgsConstructor
+@Data
 public class SqlToolApiClient {
 
-    private static final String GATEWAY_HOST = "http://localhost:8090";
+    private static final String HOST = "http://localhost:8090";
 
-    private static final String DATA="data";
     private String accessKey;
     private String secretKey;
 
 
-
-
-    public LmsResponse randomData(LmsRequest request)  {
+    /**
+     * 根据请求获取生成数据
+     * @param request
+     * @return
+     */
+    public LmsResponseBody randomData(LmsRequest request) throws JsonProcessingException {
 
 
 
         String requestBodyJson = JSONUtil.toJsonStr(request);
         log.info("转换的请求json:"+requestBodyJson);
 
-        HttpResponse response = HttpUtil.createPost(GATEWAY_HOST + "/api/sql/generate/sdk")
+        HttpResponse response = HttpUtil.createPost(HOST + "/api/sql/generate/sdk")
                 .addHeaders(getHeaderMap(requestBodyJson))
                 .body(requestBodyJson)
                 .execute();
@@ -54,17 +60,15 @@ public class SqlToolApiClient {
     }
 
 
-    private LmsResponse getResponseData(String body){
-        JSONObject jsonObject = JSON.parseObject(body);
-        JSONObject data =(JSONObject) jsonObject.get(DATA);
-        return data.toJavaObject(LmsResponse.class);
+    private LmsResponseBody getResponseData(String body) throws JsonProcessingException {
+        ObjectMapper objectMapper=new ObjectMapper();
+        LmsResponse<LmsResponseBody> lmsResponse = objectMapper.readValue(body, new TypeReference<LmsResponse<LmsResponseBody>>() {});
+        return lmsResponse.getData();
     }
 
     private Map<String, String> getHeaderMap(String body) {
         Map<String, String> hashMap = new HashMap<>();
         hashMap.put("accessKey", accessKey);
-        // 一定不能直接发送
-//        hashMap.put("secretKey", secretKey);
         hashMap.put("Content-Type", "application/json; charset=UTF-8");
         hashMap.put("nonce", RandomUtil.randomNumbers(4));
         hashMap.put("body", body);
